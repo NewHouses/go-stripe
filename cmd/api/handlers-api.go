@@ -25,14 +25,14 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 	err := json.NewDecoder(r.Body).Decode(&payload)
 	if err != nil {
 		app.errorLog.Println(err)
-		app.senErrorResponse(w, err.Error())
+		app.sendErrorResponse(w, err.Error())
 		return
 	}
 
 	amount, err := strconv.Atoi(payload.Amount)
 	if err != nil {
 		app.errorLog.Println(err)
-		app.senErrorResponse(w, err.Error())
+		app.sendErrorResponse(w, err.Error())
 		return
 	}
 
@@ -44,14 +44,14 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 
 	pi, msg, err := card.Charge(payload.Currency, amount)
 	if err != nil {
-		app.senErrorResponse(w, msg)
+		app.sendErrorResponse(w, msg)
 		return
 	}
 
-	app.senResponse(w, pi)
+	app.sendResponse(w, pi)
 }
 
-func (app *application) senResponse(w http.ResponseWriter, j any) {
+func (app *application) sendResponse(w http.ResponseWriter, j any) {
 	out, err := json.MarshalIndent(j, "", "	  ")
 	if err != nil {
 		app.errorLog.Println(err)
@@ -62,11 +62,11 @@ func (app *application) senResponse(w http.ResponseWriter, j any) {
 	w.Write(out)
 }
 
-func (app *application) senErrorResponse(w http.ResponseWriter, errorMessage string) {
+func (app *application) sendErrorResponse(w http.ResponseWriter, errorMessage string) {
 	j := jsonResponse{
 		OK:      false,
 		Message: errorMessage,
 	}
 
-	app.senResponse(w, j)
+	app.sendResponse(w, j)
 }
