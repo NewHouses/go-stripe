@@ -51,6 +51,18 @@ func cardErrorMessage(code stripe.ErrorCode) string {
 		return "Your card was diclined"
 	case stripe.ErrorCodeExpiredCard:
 		return "Your card is expired"
+	case stripe.ErrorCodeIncorrectCVC:
+		return "Incorrect CVC code"
+	case stripe.ErrorCodeIncorrectZip:
+		return "Incorrect zip/postal code"
+	case stripe.ErrorCodeAmountTooLarge:
+		return "the amount is too large to charge to your card"
+	case stripe.ErrorCodeAmountTooSmall:
+		return "the amount is small large to charge to your card"
+	case stripe.ErrorCodeBalanceInsufficient:
+		return "Insufficient balance"
+	case stripe.ErrorCodePostalCodeInvalid:
+		return "Your postal code is invalid"
 	default:
 		return "Your card was declined"
 	}
