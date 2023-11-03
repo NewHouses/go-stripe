@@ -71,7 +71,7 @@ func (app *application) parseTemplate(partials []string, page, templateToRender 
 	// build partials
 	if len(partials) > 0 {
 		for i, x := range partials {
-			partials[i] = fmt.Sprintf("templates/%s.page.gohtml", x)
+			partials[i] = fmt.Sprintf("templates/%s.partial.gohtml", x)
 		}
 
 		t, err = template.New(fmt.Sprintf("%s.page.gohtml", page)).Funcs(functions).ParseFS(templateFS, "templates/base.layout.gohtml", strings.Join(partials, ","), templateToRender)
