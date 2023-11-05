@@ -3,6 +3,7 @@ package cards
 import (
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/paymentintent"
+	"github.com/stripe/stripe-go/v72/paymentmethod"
 )
 
 type Card struct {
@@ -45,10 +46,26 @@ func (c *Card) CreatePaymentIntent(currency string, amount int) (*stripe.Payment
 	return pi, "", nil
 }
 
+func (c *Card) GetPaymentMethod(s string) (*stripe.PaymentMethod, error) {
+	stripe.Key = c.Secret
+
+	pm, err := paymentmethod.Get(s, nil)
+
+	return pm, err
+}
+
+func (c *Card) RetrievePaymentIntent(id string) (*stripe.PaymentIntent, error) {
+	stripe.Key = c.Secret
+
+	pi, err := paymentintent.Get(id, nil)
+
+	return pi, err
+}
+
 func cardErrorMessage(code stripe.ErrorCode) string {
 	switch code {
 	case stripe.ErrorCodeCardDeclined:
-		return "Your card was diclined"
+		return "Your card was declined"
 	case stripe.ErrorCodeExpiredCard:
 		return "Your card is expired"
 	case stripe.ErrorCodeIncorrectCVC:
