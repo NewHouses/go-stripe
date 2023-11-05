@@ -139,3 +139,29 @@ func (m DBModel) InsertTransaction(txn Transaction) (int, error) {
 
 	return int(id), err
 }
+
+// InsertOrder inserts a new order, and returns its id
+func (m DBModel) InsertOrder(order Order) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stmt := `
+		insert into transactions
+			(widget_id, transaction_id, status_id, quantity, amount, created_at, updated_at)
+			values (?, ?, ?, ?, ?, ?, ?)
+	`
+
+	result, err := m.DB.ExecContext(ctx, stmt,
+		order.WidgetID,
+		order.TransactionID,
+		order.StatusID,
+		order.Quantity,
+		order.Amount,
+		time.Now(),
+		time.Now(),
+	)
+
+	id, err := result.LastInsertId()
+
+	return int(id), err
+}
