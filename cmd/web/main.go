@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"html/template"
@@ -57,7 +58,9 @@ func (app *application) serve() error {
 }
 
 func main() {
+	gob.Register(map[string]interface{}{})
 	var cfg config
+
 	flag.IntVar(&cfg.port, "port", 4000, "Server port to listen on")
 	flag.StringVar(&cfg.env, "env", "development", "Application environment {development|production}")
 	flag.StringVar(&cfg.db.dsn, "dsn", "simons:secret@tcp(localhost:3306)/widgets?parseTime=true&tls=false", "DSN")
