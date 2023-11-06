@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"myapp/internal/cards"
+	"myapp/internal/models"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -13,10 +15,15 @@ type stripePayload struct {
 	Currency      string `json:"currency"`
 	Amount        string `json:"amount"`
 	PaymentMethod string `json:"payment_method"`
-	Name          string `json:"name"`
 	Email         string `json:"email"`
+	CardBrand     string `json:"card_brand"`
+	ExpiryMonth   int    `json:"exp_month"`
+	ExpiryYear    int    `json:"exp_year"`
 	LastFour      string `json:"last_four"`
 	Plan          string `json:"plan"`
+	ProductID     string `json:"product_id"`
+	FirstName     string `json:"first_name"`
+	Lastname      string `json:"last_name"`
 }
 
 type jsonResponse struct {
@@ -79,7 +86,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 		return
 	}
 
-	app.infoLog.Println(data.Name, data.Email, data.LastFour, data.PaymentMethod, data.Plan)
+	app.infoLog.Println(data.FirstName, data.Email, data.LastFour, data.PaymentMethod, data.Plan)
 
 	card := cards.Card{
 		Secret:   app.config.stripe.secret,
@@ -87,25 +94,91 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 		Currency: data.Currency,
 	}
 
-	stripeCustomer, msg, err := card.CreateCustomer(data.PaymentMethod, data.Name, data.Email)
+	txnMsg := "Transaction successful"
+
+	stripeCustomer, msg, err := card.CreateCustomer(data.PaymentMethod, data.FirstName, data.Email)
+	if err != nil {
+		app.errorLog.Println(err)
+		app.sendErrorResponse(w, msg)
+		return
+	}
+
+	subscription, err := card.SubscribeToPlan(stripeCustomer, data.Plan, data.LastFour, "")
+	if err != nil {
+		app.errorLog.Println(err)
+		txnMsg = "Error subscribing customer"
+		app.sendErrorResponse(w, txnMsg)
+		return
+	}
+
+	app.infoLog.Println("subscription id is ", subscription.ID)
+
+	productID, _ := strconv.Atoi(data.ProductID)
+	customerID, err := app.SaveCustomer(data.FirstName, data.Lastname, data.Email)
 	if err != nil {
 		app.errorLog.Println(err)
 		return
 	}
 
-	subscriptionId, err := card.SubscribeToPlan(stripeCustomer, data.Plan, data.LastFour, "")
+	amount, _ := strconv.Atoi(data.Amount)
+	txn := models.Transaction{
+		Amount:              amount,
+		Currency:            "eur",
+		LastFour:            data.LastFour,
+		ExpiryMonth:         data.ExpiryMonth,
+		ExpiryYear:          data.ExpiryYear,
+		TransactionStatusID: 2,
+	}
+
+	txnID, err := app.SaveTransaction(txn)
 	if err != nil {
 		app.errorLog.Println(err)
 		return
 	}
 
-	app.infoLog.Println("subscription id is ", subscriptionId)
+	order := models.Order{
+		WidgetID:      productID,
+		TransactionID: txnID,
+		CustomerID:    customerID,
+		StatusID:      1,
+		Quantity:      1,
+		Amount:        amount,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+
+	_, err = app.SaveOrder(order)
 
 	resp := jsonResponse{
 		OK:      true,
-		Message: msg,
+		Message: txnMsg,
 	}
+
 	app.sendResponse(w, resp)
+}
+
+func (app *application) SaveTransaction(txn models.Transaction) (int, error) {
+	id, err := app.DB.InsertTransaction(txn)
+
+	return id, err
+}
+
+func (app *application) SaveOrder(order models.Order) (int, error) {
+	id, err := app.DB.InsertOrder(order)
+
+	return id, err
+}
+
+func (app *application) SaveCustomer(firstName string, lastName string, email string) (int, error) {
+	customer := models.Customer{
+		FirstName: firstName,
+		LastName:  lastName,
+		Email:     email,
+	}
+
+	id, err := app.DB.InsertCustomer(customer)
+
+	return id, err
 }
 
 func (app *application) sendResponse(w http.ResponseWriter, j any) {
