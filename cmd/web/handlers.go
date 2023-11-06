@@ -271,5 +271,18 @@ func (app *application) BronzePlan(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		app.errorLog.Println(err)
 	}
+}
 
+func (app *application) BronzePlanReceipt(w http.ResponseWriter, r *http.Request) {
+
+	widget, err := app.DB.GetWidget(2)
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+	data := make(map[string]interface{})
+	data["widget"] = widget
+	if err := app.renderTemplate(w, r, "receipt-plan", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
 }
