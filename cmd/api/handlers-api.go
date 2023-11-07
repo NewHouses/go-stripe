@@ -38,15 +38,13 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 
 	err := json.NewDecoder(r.Body).Decode(&payload)
 	if err != nil {
-		app.errorLog.Println(err)
-		app.sendErrorResponse(w, err.Error())
+		app.sendBadRequest(w, err.Error())
 		return
 	}
 
 	amount, err := strconv.Atoi(payload.Amount)
 	if err != nil {
-		app.errorLog.Println(err)
-		app.sendErrorResponse(w, err.Error())
+		app.sendBadRequest(w, err.Error())
 		return
 	}
 
@@ -58,7 +56,7 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 
 	pi, msg, err := card.Charge(payload.Currency, amount)
 	if err != nil {
-		app.sendErrorResponse(w, msg)
+		app.sendBadRequest(w, msg)
 		return
 	}
 
@@ -98,8 +96,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 
 	stripeCustomer, msg, err := card.CreateCustomer(data.PaymentMethod, data.FirstName, data.Email)
 	if err != nil {
-		app.errorLog.Println(err)
-		app.sendErrorResponse(w, msg)
+		app.sendBadRequest(w, msg)
 		return
 	}
 
@@ -107,7 +104,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 	if err != nil {
 		app.errorLog.Println(err)
 		txnMsg = "Error subscribing customer"
-		app.sendErrorResponse(w, txnMsg)
+		app.sendBadRequest(w, txnMsg)
 		return
 	}
 
@@ -181,22 +178,46 @@ func (app *application) SaveCustomer(firstName string, lastName string, email st
 	return id, err
 }
 
-func (app *application) sendResponse(w http.ResponseWriter, j any) {
-	out, err := json.MarshalIndent(j, "", "	  ")
+func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) {
+	var userInput struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	err := app.readJson(w, r, &userInput)
 	if err != nil {
-		app.errorLog.Println(err)
+		app.sendBadRequest(w, err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(out)
+	var payload struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+	}
+
+	payload.Error = false
+	payload.Message = "Success!"
+
+	app.sendResponse(w, payload)
 }
 
-func (app *application) sendErrorResponse(w http.ResponseWriter, errorMessage string) {
+func (app *application) sendBadRequest(w http.ResponseWriter, errorMessage string) error {
 	j := jsonResponse{
 		OK:      false,
 		Message: errorMessage,
 	}
 
-	app.sendResponse(w, j)
+	return app.sendResponse(w, j)
+}
+
+func (app *application) sendResponse(w http.ResponseWriter, j any) error {
+	out, err := json.MarshalIndent(j, "", "	  ")
+	if err != nil {
+		app.errorLog.Println(err)
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
+	return nil
 }
