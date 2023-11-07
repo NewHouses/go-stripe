@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"myapp/internal/cards"
 	"myapp/internal/models"
 	"net/http"
@@ -33,9 +34,10 @@ type jsonResponse struct {
 	ID      int    `json:"id,omitempty"`
 }
 
-type payload struct {
-	Error   bool   `json:"error"`
-	Message string `json:"message"`
+type response struct {
+	Error   bool        `json:"error"`
+	Message string      `json:"message"`
+	Content interface{} `json:"content"`
 }
 
 func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +67,11 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	app.sendResponse(w, http.StatusOK, pi)
+	var response response
+	response.Message = msg
+	response.Content = pi
+
+	app.sendOK(w, response)
 }
 
 func (app *application) GetWidgetById(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +84,10 @@ func (app *application) GetWidgetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.sendResponse(w, http.StatusOK, widget)
+	var response response
+	response.Content = widget
+
+	app.sendOK(w, response)
 }
 
 func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, r *http.Request) {
@@ -151,12 +160,10 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 
 	_, err = app.SaveOrder(order)
 
-	resp := jsonResponse{
-		OK:      true,
-		Message: txnMsg,
-	}
+	var response response
+	response.Message = txnMsg
 
-	app.sendResponse(w, http.StatusOK, resp)
+	app.sendOK(w, response)
 }
 
 func (app *application) SaveTransaction(txn models.Transaction) (int, error) {
@@ -217,20 +224,32 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	app.sendOK(w)
+	token, err := models.GenerateToken(user.ID, 24*time.Hour, models.ScopeAuthentication)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	var payload struct {
+		Token *models.Token `json:"authentication_token"`
+	}
+	payload.Token = token
+
+	var response response
+	response.Message = fmt.Sprintf("token for %s created", userInput.Email)
+	response.Content = payload
+
+	app.sendOK(w, response)
 }
 
-func (app *application) sendOK(w http.ResponseWriter) error {
-	var payload payload
-
+func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
-	payload.Message = "Success!"
 
 	return app.sendResponse(w, http.StatusOK, payload)
 }
 
 func (app *application) sendBadRequest(w http.ResponseWriter, errorMessage string) error {
-	var payload payload
+	var payload response
 
 	payload.Error = true
 	payload.Message = errorMessage
@@ -239,7 +258,7 @@ func (app *application) sendBadRequest(w http.ResponseWriter, errorMessage strin
 }
 
 func (app *application) sendUnauthorized(w http.ResponseWriter) error {
-	var payload payload
+	var payload response
 
 	payload.Error = true
 	payload.Message = "invalid authentication credentials"
@@ -247,8 +266,8 @@ func (app *application) sendUnauthorized(w http.ResponseWriter) error {
 	return app.sendResponse(w, http.StatusUnauthorized, payload)
 }
 
-func (app *application) sendResponse(w http.ResponseWriter, statusID int, j any, headers ...http.Header) error {
-	out, err := app.writeJson(j)
+func (app *application) sendResponse(w http.ResponseWriter, statusID int, payload any, headers ...http.Header) error {
+	out, err := app.writeJson(payload)
 	if err != nil {
 		app.errorLog.Println(err)
 		return err
