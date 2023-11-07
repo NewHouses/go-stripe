@@ -33,6 +33,11 @@ type jsonResponse struct {
 	ID      int    `json:"id,omitempty"`
 }
 
+type payload struct {
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
+}
+
 func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request) {
 	var payload stripePayload
 
@@ -60,7 +65,7 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	app.sendResponse(w, pi)
+	app.sendResponse(w, http.StatusOK, pi)
 }
 
 func (app *application) GetWidgetById(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +78,7 @@ func (app *application) GetWidgetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.sendResponse(w, widget)
+	app.sendResponse(w, http.StatusOK, widget)
 }
 
 func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, r *http.Request) {
@@ -151,7 +156,7 @@ func (app *application) CreateCustomerAndSubscribeToPlan(w http.ResponseWriter, 
 		Message: txnMsg,
 	}
 
-	app.sendResponse(w, resp)
+	app.sendResponse(w, http.StatusOK, resp)
 }
 
 func (app *application) SaveTransaction(txn models.Transaction) (int, error) {
@@ -190,27 +195,59 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var payload struct {
-		Error   bool   `json:"error"`
-		Message string `json:"message"`
+	app.infoLog.Println(userInput.Email)
+
+	user, err := app.DB.GetUserByEmail(userInput.Email)
+	if err != nil {
+		app.errorLog.Println(err)
+		app.sendUnauthorized(w)
+		return
 	}
+	app.infoLog.Println(user)
+
+	validPassword, err := app.passwordMatches(user.Password, userInput.Password)
+	if err != nil {
+		app.errorLog.Println(err)
+		app.sendUnauthorized(w)
+		return
+	}
+
+	if !validPassword {
+		app.sendUnauthorized(w)
+		return
+	}
+
+	app.sendOK(w)
+}
+
+func (app *application) sendOK(w http.ResponseWriter) error {
+	var payload payload
 
 	payload.Error = false
 	payload.Message = "Success!"
 
-	app.sendResponse(w, payload)
+	return app.sendResponse(w, http.StatusOK, payload)
 }
 
 func (app *application) sendBadRequest(w http.ResponseWriter, errorMessage string) error {
-	j := jsonResponse{
-		OK:      false,
-		Message: errorMessage,
-	}
+	var payload payload
 
-	return app.sendResponse(w, j)
+	payload.Error = true
+	payload.Message = errorMessage
+
+	return app.sendResponse(w, http.StatusBadRequest, payload)
 }
 
-func (app *application) sendResponse(w http.ResponseWriter, j any, headers ...http.Header) error {
+func (app *application) sendUnauthorized(w http.ResponseWriter) error {
+	var payload payload
+
+	payload.Error = true
+	payload.Message = "invalid authentication credentials"
+
+	return app.sendResponse(w, http.StatusUnauthorized, payload)
+}
+
+func (app *application) sendResponse(w http.ResponseWriter, statusID int, j any, headers ...http.Header) error {
 	out, err := app.writeJson(j)
 	if err != nil {
 		app.errorLog.Println(err)
@@ -224,7 +261,7 @@ func (app *application) sendResponse(w http.ResponseWriter, j any, headers ...ht
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(statusID)
 	w.Write(out)
 	return nil
 }
