@@ -230,6 +230,8 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	err = app.DB.InsertToken(token, user)
+
 	var payload struct {
 		Token *models.Token `json:"authentication_token"`
 	}
