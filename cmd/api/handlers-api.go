@@ -244,6 +244,10 @@ func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) 
 	app.sendOK(w, response)
 }
 
+func (app *application) CheckAuthenticated(w http.ResponseWriter, r *http.Request) {
+	app.sendUnauthorized(w)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
