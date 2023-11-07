@@ -210,14 +210,21 @@ func (app *application) sendBadRequest(w http.ResponseWriter, errorMessage strin
 	return app.sendResponse(w, j)
 }
 
-func (app *application) sendResponse(w http.ResponseWriter, j any) error {
-	out, err := json.MarshalIndent(j, "", "	  ")
+func (app *application) sendResponse(w http.ResponseWriter, j any, headers ...http.Header) error {
+	out, err := app.writeJson(j)
 	if err != nil {
 		app.errorLog.Println(err)
 		return err
 	}
 
+	if len(headers) > 0 {
+		for k, v := range headers[0] {
+			w.Header()[k] = v
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(out)
 	return nil
 }

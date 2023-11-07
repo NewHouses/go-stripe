@@ -27,3 +27,9 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, data in
 
 	return nil
 }
+
+func (app *application) writeJson(data interface{}) ([]byte, error) {
+	out, err := json.MarshalIndent(data, "", "\t")
+
+	return out, err
+}
