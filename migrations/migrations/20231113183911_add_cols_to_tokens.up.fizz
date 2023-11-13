@@ -1,0 +1,3 @@
+add_column("tokens", "expiry", "datetime")
+
+sql("alter table tokens alter column expiry set default now();")
