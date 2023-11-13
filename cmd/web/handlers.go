@@ -314,3 +314,10 @@ func (app *application) PostLoginPage(w http.ResponseWriter, r *http.Request) {
 	app.Session.Put(r.Context(), "userID", id)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+func (app *application) PostLogout(w http.ResponseWriter, r *http.Request) {
+	app.Session.Destroy(r.Context())
+	app.Session.RenewToken(r.Context())
+
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
