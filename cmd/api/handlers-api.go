@@ -284,6 +284,73 @@ func (app *application) authenticateToken(r *http.Request) (*models.User, error)
 	return user, nil
 }
 
+func (app *application) VirtualTerminalPaymentSucceeded(w http.ResponseWriter, r *http.Request) {
+	var txnData struct {
+		PaymentAmount   int    `json:"amount"`
+		PaymentCurrency string `json:"currency"`
+		Firstname       string `json:"first_name"`
+		LastName        string `json:"last_name"`
+		Email           string `json:"email"`
+		PaymentIntent   string `json:"payment_intent"`
+		PaymentMethod   string `json:"payment_method"`
+		BankReturnCode  string `json:"bank_return_code"`
+		ExpiryMonth     int    `json:"expiry_month"`
+		ExpiryYear      int    `json:"expiry_year"`
+		LastFour        string `json:"last_four"`
+	}
+
+	err := app.readJson(w, r, &txnData)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	card := cards.Card{
+		Secret: app.config.stripe.secret,
+		Key:    app.config.stripe.key,
+	}
+
+	pi, err := card.RetrievePaymentIntent(txnData.PaymentIntent)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	pm, err := card.GetPaymentMethod(txnData.PaymentMethod)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	txnData.LastFour = pm.Card.Last4
+	txnData.ExpiryMonth = int(pm.Card.ExpMonth)
+	txnData.ExpiryYear = int(pm.Card.ExpYear)
+
+	txn := models.Transaction{
+		Amount:              txnData.PaymentAmount,
+		Currency:            txnData.PaymentCurrency,
+		LastFour:            txnData.LastFour,
+		ExpiryMonth:         txnData.ExpiryMonth,
+		ExpiryYear:          txnData.ExpiryYear,
+		PaymentIntent:       txnData.PaymentIntent,
+		PaymentMethod:       txnData.PaymentMethod,
+		BankReturnCode:      pi.Charges.Data[0].ID,
+		TransactionStatusID: 2,
+	}
+
+	_, err = app.SaveTransaction(txn)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Message: "Virtual terminal payment succeeded",
+		Content: txn,
+	}
+	app.sendOK(w, response)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
