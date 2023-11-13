@@ -10,7 +10,7 @@
 
     <div class="alert alert-danger text-center d-none" id="login-messages"></div>
     
-    <form action="" method="post"
+    <form action="" method="post" action="/login"
     name="login_form" id="login_form"
     class="d-block needs-validation charge-form"
     autocomplete="off" novalidate="">
@@ -84,12 +84,13 @@ function val() {
     fetch("{{.API}}/api/authenticate", requestOptions)
     .then(response => response.json())
     .then(data => {
-        console.log(data.content);
+        console.log(data);
         if (data.error === false) {
             localStorage.setItem('token', data.content.authentication_token.token);
             localStorage.setItem('token_expiry', data.content.authentication_token.expiry);
             showSuccess();
-            location.href = "/";
+            //location.href = "/";
+            document.getElementById("login_form").submit();
         } else {
             showError(data.message);
         }
