@@ -29,6 +29,8 @@ type config struct {
 		username string
 		password string
 	}
+	secretKey string
+	frontend  string
 }
 
 type application struct {
@@ -60,6 +62,8 @@ func main() {
 	flag.StringVar(&cfg.db.dsn, "dsn", "simons:secret@tcp(localhost:3306)/widgets?parseTime=true&tls=false", "DSN")
 	flag.StringVar(&cfg.smtp.host, "smtphost", "smtp.mailtrap.io", "smt host")
 	flag.IntVar(&cfg.smtp.port, "smtpport", 465, "smtp port")
+	flag.StringVar(&cfg.secretKey, "secret", "gfdgfg43adeedfgg", "secret key")
+	flag.StringVar(&cfg.frontend, "frontend", "http://localhost:4000", "url to frontendt")
 
 	flag.Parse()
 
