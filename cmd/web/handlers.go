@@ -341,6 +341,14 @@ func (app *application) ShowResetPassoword(w http.ResponseWriter, r *http.Reques
 	valid := signer.VerifyToken(testUrl)
 	if !valid {
 		app.errorLog.Println("Invalid url - tampering detected")
+		return
+	}
+
+	// make sure not expired
+	expired := signer.Expired(testUrl, 60)
+	if expired {
+		app.errorLog.Println("Link expired")
+		return
 	}
 
 	data := make(map[string]interface{})
