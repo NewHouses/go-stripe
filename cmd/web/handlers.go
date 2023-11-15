@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"myapp/internal/cards"
 	"myapp/internal/models"
+	"myapp/internal/urlsigner"
 	"net/http"
 	"strconv"
 	"time"
@@ -323,8 +325,30 @@ func (app *application) PostLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) ForgotPassword(w http.ResponseWriter, r *http.Request) {
-
 	if err := app.renderTemplate(w, r, "forgot-password", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) ShowResetPassoword(w http.ResponseWriter, r *http.Request) {
+	url := r.RequestURI
+	testUrl := fmt.Sprintf("%s%s", app.config.frontend, url)
+
+	signer := urlsigner.Signer{
+		Secret: []byte(app.config.secretKey),
+	}
+
+	valid := signer.VerifyToken(testUrl)
+	if !valid {
+		app.errorLog.Println("Invalid url - tampering detected")
+	}
+
+	data := make(map[string]interface{})
+	data["email"] = r.URL.Query().Get("email")
+
+	if err := app.renderTemplate(w, r, "reset-password", &templateData{
+		Data: data,
+	}); err != nil {
 		app.errorLog.Println(err)
 	}
 }
