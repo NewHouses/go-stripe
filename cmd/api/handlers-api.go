@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"myapp/internal/cards"
+	"myapp/internal/encryption"
 	"myapp/internal/models"
 	"myapp/internal/urlsigner"
 	"net/http"
@@ -405,8 +406,8 @@ func (app *application) SendPasswordResetEmail(w http.ResponseWriter, r *http.Re
 
 func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		EncryptedEmail string `json:"encrypted_email"`
+		Password       string `json:"password"`
 	}
 
 	err := app.readJson(w, r, &payload)
@@ -415,7 +416,17 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := app.DB.GetUserByEmail(payload.Email)
+	encryptor := encryption.Encryption{
+		Key: []byte(app.config.secretKey),
+	}
+
+	email, err := encryptor.Decrypt(payload.EncryptedEmail)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	user, err := app.DB.GetUserByEmail(email)
 	if err != nil {
 		app.sendBadRequest(w, err.Error())
 		return

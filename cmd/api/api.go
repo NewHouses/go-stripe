@@ -62,7 +62,6 @@ func main() {
 	flag.StringVar(&cfg.db.dsn, "dsn", "simons:secret@tcp(localhost:3306)/widgets?parseTime=true&tls=false", "DSN")
 	flag.StringVar(&cfg.smtp.host, "smtphost", "smtp.mailtrap.io", "smt host")
 	flag.IntVar(&cfg.smtp.port, "smtpport", 465, "smtp port")
-	flag.StringVar(&cfg.secretKey, "secret", "gfdgfg43adeedfgg", "secret key")
 	flag.StringVar(&cfg.frontend, "frontend", "http://localhost:4000", "url to frontendt")
 
 	flag.Parse()
@@ -71,6 +70,7 @@ func main() {
 	cfg.stripe.secret = os.Getenv("STRIPE_SECRET")
 	cfg.smtp.username = os.Getenv("SMTP_USERNAME")
 	cfg.smtp.password = os.Getenv("SMTP_PASSWORD")
+	cfg.secretKey = os.Getenv("SECRET_KEY")
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
