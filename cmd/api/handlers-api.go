@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type stripePayload struct {
@@ -398,6 +399,42 @@ func (app *application) SendPasswordResetEmail(w http.ResponseWriter, r *http.Re
 
 	response := response{
 		Message: "Email sent",
+	}
+	app.sendOK(w, response)
+}
+
+func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	err := app.readJson(w, r, &payload)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	user, err := app.DB.GetUserByEmail(payload.Email)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(payload.Password), 12)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	err = app.DB.UpdatePasswordForUser(user, string(newHash))
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Message: "password changed",
 	}
 	app.sendOK(w, response)
 }
