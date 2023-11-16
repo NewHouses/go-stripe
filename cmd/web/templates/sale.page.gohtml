@@ -7,6 +7,19 @@
 {{define "content"}}
     <h2 class="mt-5">Sale</h2>
     <hr>
+    <div>
+        <strong>Order No:</strong> <span id="order-no"></span><br>
+        <strong>Customer:</strong> <span id="customer"></span><br>
+        <strong>Product:</strong> <span id="product"></span><br>
+        <strong>Quantity:</strong> <span id="quantity"></span><br>
+        <strong>Total Sale:</strong> <span id="amount"></span><br>
+
+    </div>
+
+    <hr>
+
+    <a class="btn btn-info" href="/admin/all-sales">Cancel</a>
+    <a class="btn btn-warning" href="#!">Refund Order</a>
 
 
 {{end}}
@@ -28,7 +41,13 @@ document.addEventListener("DOMContentLoaded", function() {
     fetch("{{.API}}/api/admin/get-sale/" + id, requestOptions)
     .then(response => response.json())
     .then(function (data) {
-        console.log(data);
+        if (data.content) {
+            document.getElementById("order-no").innerHTML = data.content.id;
+            document.getElementById("customer").innerHTML = data.content.customer.first_name + " " + data.content.customer.last_name;
+            document.getElementById("product").innerHTML = data.content.widget.name;
+            document.getElementById("quantity").innerHTML = data.content.quantity;
+            document.getElementById("amount").innerHTML = formatCurrency(data.content.transaction.amount);
+        }
     })
 
     function formatCurrency(amount) {
