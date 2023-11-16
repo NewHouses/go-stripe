@@ -478,6 +478,23 @@ func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request)
 	app.sendOK(w, response)
 }
 
+func (app *application) GetSale(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	orderID, _ := strconv.Atoi(id)
+
+	sale, err := app.DB.GetOrderById(orderID)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Content: sale,
+	}
+
+	app.sendOK(w, response)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
