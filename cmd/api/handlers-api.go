@@ -464,6 +464,20 @@ func (app *application) AllSales(w http.ResponseWriter, r *http.Request) {
 	app.sendOK(w, response)
 }
 
+func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request) {
+	allSubscriptions, err := app.DB.GetAllSubscriptions()
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Content: allSubscriptions,
+	}
+
+	app.sendOK(w, response)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
