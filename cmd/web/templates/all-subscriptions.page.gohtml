@@ -68,9 +68,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function formatCurrency(amount) {
         let c = parseFloat(amount / 100);
-        return c.toLocaleString("gal", {
+        return c.toLocaleString("en-CA", {
             style: 'currency',
-            currency: 'EUR',
+            currency: 'CAD',
         })
     }
 
