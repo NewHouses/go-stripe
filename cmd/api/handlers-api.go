@@ -450,6 +450,20 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	app.sendOK(w, response)
 }
 
+func (app *application) AllSales(w http.ResponseWriter, r *http.Request) {
+	allSales, err := app.DB.GetAllOrders()
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Content: allSales,
+	}
+
+	app.sendOK(w, response)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
