@@ -107,6 +107,30 @@ func (c *Card) CreateCustomer(pm, name, email string) (*stripe.Customer, string,
 	return cust, "", nil
 }
 
+func (c *Card) Refund(pi string, amount int) error {
+	stripe.Key = c.Secret
+	amountToRefund := int64(amount)
+
+	refundParams := &stripe.RefundParams{
+		Amount:        &amountToRefund,
+		PaymentIntent: &pi,
+	}
+
+	_, err := refund.New(refundParams)
+	return err
+}
+
+func (c *Card) CancelSubscription(subID string) error {
+	stripe.Key = c.Secret
+
+	params := &stripe.SubscriptionParams{
+		CancelAtPeriodEnd: stripe.Bool(true),
+	}
+
+	_, err := sub.Update(subID, params)
+	return err
+}
+
 func cardErrorMessage(code stripe.ErrorCode) string {
 	switch code {
 	case stripe.ErrorCodeCardDeclined:
@@ -128,17 +152,4 @@ func cardErrorMessage(code stripe.ErrorCode) string {
 	default:
 		return "Your card was declined"
 	}
-}
-
-func (c *Card) Refund(pi string, amount int) error {
-	stripe.Key = c.Secret
-	amountToRefund := int64(amount)
-
-	refundParams := &stripe.RefundParams{
-		Amount:        &amountToRefund,
-		PaymentIntent: &pi,
-	}
-
-	_, err := refund.New(refundParams)
-	return err
 }
