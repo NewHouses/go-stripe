@@ -495,6 +495,41 @@ func (app *application) GetSale(w http.ResponseWriter, r *http.Request) {
 	app.sendOK(w, response)
 }
 
+func (app *application) RefundCharge(w http.ResponseWriter, r *http.Request) {
+	var chargeToRefund struct {
+		ID            int    `json:"id"`
+		PaymentIntent string `json:"pi"`
+		Amount        int    `json:"amount"`
+		Currency      string `json:"currency"`
+	}
+
+	err := app.readJson(w, r, &chargeToRefund)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	// validate
+
+	card := cards.Card{
+		Secret:   app.config.stripe.secret,
+		Key:      app.config.stripe.key,
+		Currency: chargeToRefund.Currency,
+	}
+
+	err = card.Refund(chargeToRefund.PaymentIntent, chargeToRefund.Amount)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Message: "Charge refunded",
+	}
+	app.sendOK(w, response)
+
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
