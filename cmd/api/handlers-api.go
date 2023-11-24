@@ -453,14 +453,39 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) AllSales(w http.ResponseWriter, r *http.Request) {
-	allSales, err := app.DB.GetAllOrders()
+	var payload struct {
+		PageSize    int `json:"page_size"`
+		CurrentPage int `json:"current_page"`
+	}
+
+	err := app.readJson(w, r, &payload)
 	if err != nil {
 		app.sendBadRequest(w, err.Error())
 		return
 	}
 
+	allSales, lastPage, totalRecords, err := app.DB.GetAllOrdersPaginated(2, 1)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	var content struct {
+		CurrentPage  int             `json:"current_page"`
+		PageSize     int             `json:"page_size"`
+		LastPage     int             `json:"last_page"`
+		Totalrecords int             `json:"total_records"`
+		Orders       []*models.Order `json:"orders"`
+	}
+
+	content.CurrentPage = 1
+	content.PageSize = payload.PageSize
+	content.LastPage = lastPage
+	content.Totalrecords = totalRecords
+	content.Orders = allSales
+
 	response := response{
-		Content: allSales,
+		Content: content,
 	}
 
 	app.sendOK(w, response)
