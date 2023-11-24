@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"strings"
 	"time"
 
@@ -291,7 +292,7 @@ func (m *DBModel) UpdatePasswordForUser(u User, hash string) error {
 }
 
 func (m *DBModel) GetAllOrders() ([]*Order, error) {
-	totalRecords, err := m.CountAllOrders()
+	totalRecords, err := m.CountAllOrders(false)
 	if err != nil {
 		return nil, err
 	}
@@ -371,39 +372,37 @@ func (m *DBModel) GetAllOrdersPaginated(pageSize, page int) ([]*Order, int, int,
 		orders = append(orders, &o)
 	}
 
-	totalRecords, err := m.CountAllOrders()
+	totalRecords, err := m.CountAllOrders(false)
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	lastPage := totalRecords / pageSize
+	lastPage := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
 
 	return orders, lastPage, totalRecords, nil
 }
 
-func (m *DBModel) CountAllOrders() (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+func (m *DBModel) GetAllSubscriptions() ([]*Order, error) {
+	totalRecords, err := m.CountAllOrders(true)
+	if err != nil {
+		return nil, err
+	}
 
-	query := `
-		select count(o.id)
-		from orders o
-		left join widgets w on (o.widget_id = w.id)
-		where
-		w.is_recurring = 0
-	`
-	var totalRecords int
-	countRow := m.DB.QueryRowContext(ctx, query)
-	err := countRow.Scan(&totalRecords)
+	orders, _, _, err := m.GetAllSubscriptionsPaginated(totalRecords, 0)
+	if err != nil {
+		return nil, err
+	}
 
-	return totalRecords, err
+	return orders, nil
 }
 
-func (m *DBModel) GetAllSubscriptions() ([]*Order, error) {
+func (m *DBModel) GetAllSubscriptionsPaginated(pageSize, page int) ([]*Order, int, int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	var orders []*Order
+
+	offset := (page - 1) * pageSize
 
 	query := `
 		select
@@ -421,11 +420,12 @@ func (m *DBModel) GetAllSubscriptions() ([]*Order, error) {
 			w.is_recurring = 1
 		order by 
 			o.created_at desc
-	`
+			limit ? offset ?
+		`
 
-	rows, err := m.DB.QueryContext(ctx, query)
+	rows, err := m.DB.QueryContext(ctx, query, pageSize, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, err
 	}
 	defer rows.Close()
 
@@ -457,12 +457,43 @@ func (m *DBModel) GetAllSubscriptions() ([]*Order, error) {
 			&o.Customer.Email,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, 0, err
 		}
 		orders = append(orders, &o)
 	}
 
-	return orders, nil
+	totalRecords, err := m.CountAllOrders(true)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	lastPage := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+
+	return orders, lastPage, totalRecords, nil
+}
+
+func (m *DBModel) CountAllOrders(retrieveTransactions bool) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	isRecurring := 0
+
+	if retrieveTransactions {
+		isRecurring = 1
+	}
+
+	query := `
+		select count(o.id)
+		from orders o
+		left join widgets w on (o.widget_id = w.id)
+		where
+		w.is_recurring = ?
+	`
+	var totalRecords int
+	countRow := m.DB.QueryRowContext(ctx, query, isRecurring)
+	err := countRow.Scan(&totalRecords)
+
+	return totalRecords, err
 }
 
 func (m *DBModel) GetOrderById(id int) (Order, error) {
