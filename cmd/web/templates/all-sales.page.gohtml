@@ -22,12 +22,59 @@
 
         </tbody>
     </table>
+
+    <nav>
+        <ul id="paginator" class="pagination">
+
+        </u>
+    </nav>
 {{end}}
 
 {{define "js"}}
 <script>
+let currentPage = 1;
+let pageSize = 2;
+
+function paginator(pages, curPage) {
+    let p = document.getElementById("paginator");    
+    let html = ``
+
+    if(curPage != 1)
+    { 
+       html = `<li class="page-item"><a href="#!" class="page-link pager" data-page="${curPage - 1}">&lt;</a></li>`;
+    }
+
+    for (var i = 1; i <= pages; i++) {
+        html += `<li class="page-item"><a href="#!" class="page-link pager" data-page="${i}">${i}</a></li>`;
+    }
+
+    if(curPage != pages)
+    {
+        html += `<li class="page-item"><a href="#!" class="page-link pager" data-page="${curPage + 1}">&gt;</a></li>`;
+    }
+
+    p.innerHTML = html;
+
+    let pageBtns = document.getElementsByClassName("pager");
+    for (var j = 0; j < pageBtns.length; j++) {
+        pageBtns[j].addEventListener("click", function(evt){
+            let desiredPage = evt.target.getAttribute("data-page");
+            if ((desiredPage > 0) && (desiredPage <= pages + 1)) {
+                updateTable(pageSize, desiredPage);
+            }
+        })
+    }
+}
+
+function updateTable(ps, cp) {
     let token = localStorage.getItem("token");
     let tbody = document.getElementById("sales-table").getElementsByTagName("tbody")[0];
+    tbody.innerHTML = "";
+
+    let body = {
+        page_size: parseInt(ps, 10),
+        page: parseInt(cp, 10),
+    }
 
     const requestOptions = {
         method: 'post',
@@ -36,13 +83,14 @@
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token,
         },
+        body: JSON.stringify(body),
     }
 
     fetch("{{.API}}/api/admin/all-sales", requestOptions)
     .then(response => response.json())
     .then(function (data) {        
-        if (data.content) {
-            data.content.forEach(function(i) {
+        if (data.content.orders) {
+            data.content.orders.forEach(function(i) {
                 let newRow = tbody.insertRow();
                 let newCell = newRow.insertCell();
 
@@ -68,20 +116,26 @@
                     newCell.innerHTML = `<span class="badge bg-success">Charged</span>`;
                 }
             })
+            paginator(data.content.last_page, data.content.current_page);
         } else {
             let newRow = tbody.insertRow();
             let newCell = newRow.insertCell();
-            newCell.setAttribute("colspan", "4");
+            newCell.setAttribute("colspan", "5");
             newCell.innerHTML = "No data available";
         }
     })
+}
 
-    function formatCurrency(amount) {
-        let c = parseFloat(amount/100);
-        return c.toLocaleString("gal", {
-            style: "currency",
-            currency: "EUR",
-        })
-    }
+document.addEventListener("DOMContentLoaded", function() {
+    updateTable(pageSize, currentPage);
+})
+
+function formatCurrency(amount) {
+    let c = parseFloat(amount/100);
+    return c.toLocaleString("gal", {
+        style: "currency",
+        currency: "EUR",
+    })
+}
 </script>
 {{end}}
