@@ -718,6 +718,23 @@ func (app *application) EditUser(w http.ResponseWriter, r *http.Request) {
 	app.sendOK(w, response)
 }
 
+func (app *application) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	userId, _ := strconv.Atoi(id)
+
+	err := app.DB.DeleteUser(userId)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Message: "User deleted sucessfully",
+	}
+
+	app.sendOK(w, response)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
