@@ -661,6 +661,63 @@ func (app *application) OneUser(w http.ResponseWriter, r *http.Request) {
 	app.sendOK(w, response)
 }
 
+func (app *application) EditUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	userId, _ := strconv.Atoi(id)
+
+	var user models.User
+
+	err := app.readJson(w, r, &user)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	if userId > 0 {
+		err = app.DB.EditUser(user)
+		if err != nil {
+			app.sendBadRequest(w, err.Error())
+			return
+		}
+
+		if user.Password != "" {
+			newHash, err := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+			if err != nil {
+				app.sendBadRequest(w, err.Error())
+				return
+			}
+
+			err = app.DB.UpdatePasswordForUser(user, string(newHash))
+			if err != nil {
+				app.sendBadRequest(w, err.Error())
+				return
+			}
+		}
+	} else {
+		if user.Password == "" {
+			app.sendBadRequest(w, "Password cannot be empty")
+			return
+		}
+		newHash, err := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+		if err != nil {
+			app.sendBadRequest(w, err.Error())
+			return
+		}
+
+		err = app.DB.InsertUser(user, string(newHash))
+		if err != nil {
+			app.sendBadRequest(w, err.Error())
+			return
+		}
+	}
+
+	response := response{
+		Message: "User succesfully created",
+	}
+
+	app.sendOK(w, response)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
