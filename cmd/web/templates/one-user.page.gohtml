@@ -127,6 +127,7 @@ document.addEventListener("DOMContentLoaded", function() {
         fetch('{{.API}}/api/admin/all-users/' + id, requestOptions)
         .then(response => response.json())
         .then(function (data) {
+            console.log(data);
             if (data.content) {
                 document.getElementById("first_name").value = data.content.first_name;
                 document.getElementById("last_name").value = data.content.last_name;
@@ -162,6 +163,13 @@ delBtn.addEventListener("click", function() {
                 if (data.error) {
                     Swal.fire("Error: " + data.message);
                 } else {
+                    let jsonData = {
+                        action: "deleteUser",
+                        user_id: parseInt(id, 10),
+                    }
+
+                    socket.send(JSON.stringify(jsonData));
+                    
                     location.href="/admin/all-users";
                 }
             })
