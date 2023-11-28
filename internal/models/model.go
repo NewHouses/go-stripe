@@ -608,7 +608,7 @@ func (m *DBModel) GetOneUser(id int) (User, error) {
 
 	query := `
 		select
-			id, last_name, first_name, email, created_at, updated?at
+			id, last_name, first_name, email, created_at, updated_at
 		from
 			users
 		where

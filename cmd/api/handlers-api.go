@@ -644,6 +644,23 @@ func (app *application) AllUsers(w http.ResponseWriter, r *http.Request) {
 	app.sendOK(w, response)
 }
 
+func (app *application) OneUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	userId, _ := strconv.Atoi(id)
+
+	user, err := app.DB.GetOneUser(userId)
+	if err != nil {
+		app.sendBadRequest(w, err.Error())
+		return
+	}
+
+	response := response{
+		Content: user,
+	}
+
+	app.sendOK(w, response)
+}
+
 func (app *application) sendOK(w http.ResponseWriter, payload response) error {
 	payload.Error = false
 
