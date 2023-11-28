@@ -67,7 +67,10 @@ let delBtn = document.getElementById("deleteBtn");
 document.addEventListener("DOMContentLoaded", function() {
 
     if (id !== "0") {
-        delBtn.classList.remove("d-none");
+        if ( id !== "{{.UserId}}")
+        {
+            delBtn.classList.remove("d-none");
+        }
 
         const requestOptions = {
             method: 'get',
