@@ -211,7 +211,6 @@ func (app *application) callInvoiceMicro(inv Invoice) error {
 		return err
 	}
 	defer resp.Body.Close()
-	app.infoLog.Println(resp.Body)
 
 	return nil
 }
