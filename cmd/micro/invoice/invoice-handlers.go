@@ -27,6 +27,8 @@ type response struct {
 }
 
 func (app *application) CreateAndSendInvoice(w http.ResponseWriter, r *http.Request) {
+	app.infoLog.Println("[Invoice Microservice] - Creating invoice")
+
 	// receive json
 	var order Order
 
