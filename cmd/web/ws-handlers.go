@@ -37,8 +37,6 @@ var clients = make(map[WebSocketConnection]string)
 var wsChan = make(chan WsPayload)
 
 func (app *application) WsEndPoint(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("w's type is %T\n", w)
-
 	ws, err := upgradeConnection.Upgrade(w, r, nil)
 	if err != nil {
 		app.errorLog.Println(err)
@@ -64,7 +62,7 @@ func (app *application) WsEndPoint(w http.ResponseWriter, r *http.Request) {
 func (app *application) ListenForWS(conn *WebSocketConnection) {
 	defer func() {
 		if r := recover(); r != nil {
-			app.errorLog.Println("ERORR:", fmt.Sprintf("%v", r))
+			app.errorLog.Println("ERROR:", fmt.Sprintf("%v", r))
 		}
 	}()
 
@@ -74,6 +72,7 @@ func (app *application) ListenForWS(conn *WebSocketConnection) {
 		err := conn.ReadJSON(&payload)
 		if err != nil {
 			// do nothing
+			break
 		} else {
 			payload.Conn = *conn
 			wsChan <- payload
